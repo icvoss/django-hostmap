@@ -44,7 +44,7 @@ def test_exact_host_beats_wildcard():
     """
     client = Client(SERVER_NAME="example.com")
     response = client.get("/anything/")
-    assert response.status_code == 302
+    assert response.status_code == 301
     assert response["Location"] == "https://www.example.com/anything/"
 
 
