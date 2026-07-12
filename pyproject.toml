@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-hostmap"
+version = "0.1.0"
+description = "Host-based URL routing and host-aware reversing for Django, with zero call-site changes"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{name = "ICV", email = "dev@icv.dev"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "Django>=5.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "pytest-cov>=5.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10",
+    "django-stubs>=5.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/icvoss/django-hostmap"
+"Source Code" = "https://github.com/icvoss/django-hostmap"
+"Changelog" = "https://github.com/icvoss/django-hostmap/blob/main/CHANGELOG.md"
+"Issue Tracker" = "https://github.com/icvoss/django-hostmap/issues"
+"Documentation" = "https://github.com/icvoss/django-hostmap/tree/main/docs"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "settings"
+pythonpath = ["src", "tests"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/testing/*"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ ==",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # flake8-simplify
+    "DJ",  # flake8-django
+]
+ignore = [
+    "E501",   # line length handled by the formatter
+    "SIM105", # contextlib.suppress less readable than try/except/pass for NoReverseMatch
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hostmap"]
+
+[tool.ruff.format]
+quote-style = "double"
