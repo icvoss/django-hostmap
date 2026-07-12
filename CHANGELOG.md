@@ -5,6 +5,15 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-07-12
+
+### Fixed
+
+- `HostmapMiddleware` now passes through untouched when `HOSTMAP` is empty,
+  instead of raising `Http404` on every request. This makes it safe to
+  install the middleware unconditionally (e.g. in a shared settings base)
+  with the map configured per environment.
+
 ## [0.1.0] - 2026-07-12
 
 Initial release. Host-based URL routing and host-aware reversing for Django,

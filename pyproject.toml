@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-hostmap"
-version = "0.1.0"
+version = "0.1.1"
 description = "Host-based URL routing and host-aware reversing for Django, with zero call-site changes"
 readme = "README.md"
 license = "MIT"
