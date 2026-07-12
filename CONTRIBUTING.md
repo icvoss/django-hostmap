@@ -6,7 +6,7 @@ Practical guide for contributors working on this package.
 
 ## Prerequisites
 
-- Python 3.11 or later
+- Python 3.12 or later
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - Django 5.0 or later (installed as part of the dev setup)
 - No database server is required: the test suite uses SQLite
@@ -57,7 +57,7 @@ configured in `pyproject.toml`.
 |---------|-------|
 | Line length | 120 |
 | Quote style | Double |
-| Target Python | 3.11 |
+| Target Python | 3.12 |
 
 ```bash
 # Check for lint errors

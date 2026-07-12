@@ -48,14 +48,14 @@ class HostAwareResolver(URLResolver):
             return self._cross_host_reverse(lookup_view, _prefix, args, kwargs)
 
     def _cross_host_reverse(self, lookup_view, _prefix, args, kwargs):
-        from hostmap import context
-        from hostmap import map as hostmap_map
-        from hostmap.urls import _absolute_url, logger
+        # BR-HOSTMAP-005 ordering comes from the one canonical source in
+        # urls.entry_order(); the seam only supplies the low-level reverse
+        # primitive (watch flag 2, one code path). entry_order()[0] is the
+        # active host, whose miss brought us here, so we skip it.
+        from hostmap.urls import _absolute_url, entry_order, logger
 
-        active = context.get_active()
-        active_label = active.label if active is not None else None
-
-        for entry in _fallback_entries(active_label):
+        order = entry_order()
+        for entry in order[1:]:
             resolver = _stock_resolver(entry.urlconf)
             try:
                 path = resolver._reverse_with_prefix(lookup_view, _prefix, *args, **kwargs)
@@ -64,31 +64,8 @@ class HostAwareResolver(URLResolver):
             logger.debug("hostmap cross-host reverse: %r -> host %s (%s)", lookup_view, entry.host, entry.label)
             return _absolute_url(entry, path)
 
-        searched = ", ".join(e.host for e in hostmap_map.resolved_entries().values()) or "(no hostmap entries)"
+        searched = ", ".join(e.host for e in order) or "(no hostmap entries)"
         raise NoReverseMatch(f"Reverse for '{lookup_view}' not found on any hostmap host. Searched: {searched}.")
-
-
-def _fallback_entries(active_label):
-    """Non-active, non-redirect, non-wildcard entries in BR-HOSTMAP-005 order."""
-    from hostmap import map as hostmap_map
-
-    entries = hostmap_map.resolved_entries()
-    default = hostmap_map.default_entry()
-    ordered = []
-    seen = set()
-    if active_label is not None:
-        seen.add(active_label)
-
-    def _add(entry):
-        if entry is None or entry.label in seen or entry.is_redirect or entry.wildcard:
-            return
-        seen.add(entry.label)
-        ordered.append(entry)
-
-    _add(default)
-    for entry in entries.values():
-        _add(entry)
-    return ordered
 
 
 def _stock_resolver(urlconf):

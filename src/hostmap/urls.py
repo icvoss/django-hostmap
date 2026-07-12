@@ -24,13 +24,18 @@ from hostmap.conf import hostmap_settings
 logger = logging.getLogger("hostmap.reverse")
 
 
-def _entry_order():
-    """Cross-host resolution order (BR-HOSTMAP-005).
+def entry_order():
+    """Cross-host resolution order (BR-HOSTMAP-005): the single source of truth.
 
-    Active host, then the default entry, then remaining entries in
-    declaration order. Duplicates removed while preserving first sight.
-    Wildcard entries never participate in cross-host reversing
-    (BR-HOSTMAP-009); they are reachable only via ``use_host(host=...)``.
+    Active host, then the default entry, then remaining entries in declaration
+    order. Duplicates removed while preserving first sight. Redirect and
+    wildcard entries never participate in cross-host reversing (BR-HOSTMAP-009);
+    wildcards are reachable only via ``use_host(host=...)``.
+
+    Both resolution paths, the explicit API here and the resolver seam
+    (``resolvers.HostAwareResolver``), consume this one ordering so there is
+    never a second implementation of BR-HOSTMAP-005 to keep in lockstep
+    (03-services.md, watch flag 2).
     """
     entries = hostmap_map.resolved_entries()
     ordered = []
@@ -79,7 +84,7 @@ def _resolve(name, args=None, kwargs=None, *, force_host_entry=None) -> str:
         path = django_reverse(name, urlconf=force_host_entry.urlconf, args=args, kwargs=kwargs)
         return _absolute_url(force_host_entry, path)
 
-    order = _entry_order()
+    order = entry_order()
     active = order[0] if order else None
 
     # Try the active host first. A match here stays path-relative
