@@ -1,0 +1,55 @@
+site_name: django-hostmap
+site_description: Host-based URL routing and host-aware reversing for Django, with zero call-site changes
+repo_url: https://github.com/icvoss/django-hostmap
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Tutorial:
+      - Multi-host in ten minutes: tutorial/multi-host-in-ten-minutes.md
+  - How-to guides:
+      - Route a subdomain to its own URLconf: how-to/route-a-subdomain-to-its-own-urlconf.md
+      - Link across hosts in templates and Python: how-to/link-across-hosts-in-templates-and-python.md
+      - Reverse out of a request: how-to/reverse-out-of-a-request.md
+      - Add a redirect host: how-to/add-a-redirect-host.md
+      - Use wildcard subdomains: how-to/use-wildcard-subdomains.md
+      - Migrate from django-hosts: how-to/migrate-from-django-hosts.md
+      - Test host routing: how-to/test-host-routing.md
+      - Run behind a proxy: how-to/run-behind-a-proxy.md
+      - Turn off reversing: how-to/turn-off-reversing.md
+  - Explanation:
+      - How host-aware reversing works: explanation/how-host-aware-reversing-works.md
+      - Resolution order: explanation/resolution-order.md
+  - Reference:
+      - Settings: reference/settings.md
+      - API: reference/api.md
+  - Troubleshooting: troubleshooting.md
