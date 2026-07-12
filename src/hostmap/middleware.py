@@ -36,6 +36,14 @@ class HostmapMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if not hostmap_map.resolved_entries():
+            # An empty HOSTMAP disables all hostmap behaviour: no urlconf
+            # override, no request.hostmap, no active-host context. This
+            # keeps it safe to install the middleware unconditionally (a
+            # shared settings base) with the map configured per environment
+            # (04-interfaces.md section 2; BR-HOSTMAP-001).
+            return self.get_response(request)
+
         entry = self._resolve_entry(request)
 
         if entry is None:
