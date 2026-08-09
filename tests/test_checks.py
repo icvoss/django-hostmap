@@ -222,9 +222,22 @@ def test_w004_django_above_tested_ceiling_with_patch_disabled(monkeypatch):
     assert "hostmap.E009" not in ids
 
 
-def test_no_ceiling_problem_when_django_is_within_the_tested_ceiling():
+def test_no_ceiling_problem_when_django_is_within_the_tested_ceiling(monkeypatch):
     """Neither E009 nor W004 fires on a Django version within the declared
-    ceiling: the ordinary, unremarkable case."""
+    ceiling: the ordinary, unremarkable case.
+
+    Pins the ceiling to the actual running Django version (rather than
+    relying on the real installed version being within the package's
+    declared ceiling) so this test is deterministic in any environment,
+    including one that legitimately runs a newer Django than the package
+    has declared support for, exactly like its E009/W004 sibling tests
+    already pin the ceiling to force the opposite branch.
+    """
+    import django
+
+    import hostmap.apps
+
+    monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", django.VERSION[:2])
     ids = _errors(HOSTMAP=BASE_MAP, HOSTMAP_DEFAULT="www", HOSTMAP_PARENT_DOMAIN="example.com")
     assert "hostmap.E009" not in ids
     assert "hostmap.W004" not in ids
