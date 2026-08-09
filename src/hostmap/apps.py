@@ -11,7 +11,8 @@ from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 
 # The highest Django feature version this release has been tested against.
-# ``hostmap.W004`` warns when the running Django exceeds it (04-interfaces.md).
+# ``hostmap.E009`` (patch active) or ``hostmap.W004`` (patch off) fires when
+# the running Django exceeds it (04-interfaces.md, icvoss/django-hostmap#4).
 TESTED_DJANGO_CEILING = (6, 0)
 
 

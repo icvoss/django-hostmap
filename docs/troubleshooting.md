@@ -15,7 +15,8 @@ tables, see the [settings reference](reference/settings.md).
 | A host past `ALLOWED_HOSTS` serves the default entry, not `Http404` | `HOSTMAP_UNMATCHED` is `"default"` (the default setting), and this is deliberate | Set `HOSTMAP_UNMATCHED = "reject"` if you want a hard 404 instead |
 | `NoReverseMatch` naming several hosts | The URL name genuinely does not exist on any mapped host's URLconf | Confirm the name and check `manage.py hostmap` for the map you expect |
 | A Django upgrade breaks reversing, or startup fails with `ImproperlyConfigured` naming hostmap | The resolver-acquisition seam does not hold on the new Django version | Set `HOSTMAP_PATCH_REVERSE = False` until a compatible release ships |
-| `hostmap.W004` at startup | Running Django is newer than the package's tested ceiling | Advance warning, not an error; test the upgrade in a branch before trusting reversing in production |
+| `hostmap.E009` at startup | Running Django is newer than the package's tested ceiling AND `HOSTMAP_PATCH_REVERSE` is active | Set `HOSTMAP_PATCH_REVERSE = False` to run routing-only until a compatible release ships, or pin Django to a tested version |
+| `hostmap.W004` at startup | Running Django is newer than the package's tested ceiling, but `HOSTMAP_PATCH_REVERSE = False` | Advance warning, not an error; routing-only never touches the unverified seam |
 | `hostmap.E001` | A `HOSTMAP` entry is not a dict, is empty, or has unknown keys | Fix the entry's keys; valid keys are `host`, `subdomain`, `urlconf`, `redirect_to` |
 | `hostmap.E002` | An entry sets both `host` and `subdomain`, or neither | Set exactly one |
 | `hostmap.E003` | An entry sets both `urlconf` and `redirect_to`, or neither | Set exactly one |
@@ -80,14 +81,21 @@ contract: no exception, `var` simply stays unassigned.
 ## Django-upgrade seam breakage
 
 **Triggers when:** a Django upgrade changes internals the resolver
-acquisition seam depends on. Two distinct symptoms:
+acquisition seam depends on. Three distinct symptoms:
 
 1. **Startup fails with `ImproperlyConfigured`**, naming the remediation
    directly: this is the `AppConfig.ready()` self-test catching a broken
    seam before any production traffic hits it.
-2. **`hostmap.W004` warns at startup**, even though the self-test passed:
-   this is advance notice that the running Django is newer than the
-   package's tested ceiling, not proof that anything is currently broken.
+2. **Startup fails with `hostmap.E009`**, even though the self-test
+   passed: the running Django is newer than the package's declared tested
+   ceiling and the reverse patch is active. The self-test only proves the
+   seam's method signature still holds, not that its behaviour is
+   unchanged, so an unverified ceiling on the active patch fails startup
+   rather than booting on trust.
+3. **`hostmap.W004` warns at startup, non-blocking**: the same
+   version-ceiling condition as `hostmap.E009`, but with
+   `HOSTMAP_PATCH_REVERSE = False` already set, so the unverified seam is
+   never actually touched and startup is not blocked.
 
 **Fix:** set `HOSTMAP_PATCH_REVERSE = False`. Routing keeps working
 unchanged; cross-host links from stock `reverse()` regress to raising
@@ -199,7 +207,7 @@ Django needs `ROOT_URLCONF` at startup regardless of hostmap, and keeping
 the two in sync avoids surprising behaviour for anything that reads
 `ROOT_URLCONF` directly.
 
-### `hostmap.W004`: Django version ceiling
+### `hostmap.E009` / `hostmap.W004`: Django version ceiling
 
 See [Django-upgrade seam breakage](#django-upgrade-seam-breakage) above.
 

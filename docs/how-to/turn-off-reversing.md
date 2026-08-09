@@ -44,11 +44,16 @@ This is the documented remediation for two situations:
    fails with `ImproperlyConfigured` naming this setting as the fix. This is
    a deliberate hard failure: better a loud startup error than a subtly
    broken production deploy.
-2. **A newer, not-yet-broken Django version.** `hostmap.W004` warns at
+2. **A newer, not-yet-broken Django version.** `hostmap.E009` fails
    startup when the running Django is newer than the package's tested
-   ceiling, even if the seam self-test still passes. This is advance notice,
-   not an error; you can keep running with the patch on, but if reversing
-   starts misbehaving you already know the likely cause and the fix.
+   ceiling AND this setting is left on (the default), even if the seam
+   self-test still passes: the patch is running a private resolver seam
+   that has not been verified on that Django version, so this is a hard
+   stop rather than advance notice. Set `HOSTMAP_PATCH_REVERSE = False` to
+   clear it and run routing-only until a compatible release ships; with
+   this setting already off, the same version-ceiling condition is only
+   `hostmap.W004`, a non-blocking Warning, since routing-only never
+   exercises the seam.
 
 ### 3. Migrate existing cross-host links if you turn this off permanently
 
@@ -109,9 +114,13 @@ not a live toggle of the patch itself).
 - **Assuming routing also breaks.** It does not; only reversing is affected.
   This is the whole point of the escape hatch: a broken seam should degrade
   to "cross-host links are relative-only", never to "the site is down".
-- **Ignoring `hostmap.W004`.** It is advance warning, not an error. Treat it
-  as a prompt to test the upgrade in a branch before it reaches production,
-  per [the operational notes in the verification spec](../troubleshooting.md).
+- **Assuming `hostmap.E009`/`hostmap.W004` are interchangeable.** They are
+  the same underlying condition (Django newer than the tested ceiling) at
+  two different severities depending on `HOSTMAP_PATCH_REVERSE`:
+  `hostmap.E009` (patch active) fails startup and must be addressed before
+  the process comes up; `hostmap.W004` (patch off) is advance warning, a
+  prompt to test the upgrade in a branch before re-enabling the patch, per
+  [the operational notes in the troubleshooting guide](../troubleshooting.md).
 
 ## Related
 
@@ -120,4 +129,4 @@ not a live toggle of the patch itself).
 - [Reverse out of a request](reverse-out-of-a-request.md): the explicit API
   that keeps working regardless of this setting.
 - [Settings reference](../reference/settings.md): `HOSTMAP_PATCH_REVERSE` and
-  the `hostmap.W004` check.
+  the `hostmap.E009`/`hostmap.W004` checks.
