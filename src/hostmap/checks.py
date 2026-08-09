@@ -234,19 +234,50 @@ def _check_root_urlconf():
 
 
 def _check_django_ceiling():
-    # W004: running Django is newer than the package's tested ceiling.
+    # icvoss/django-hostmap#4: E009/W004, running Django is newer than the
+    # package's tested ceiling.
+    #
+    # E009 when the reverse patch is ACTIVE (HOSTMAP_PATCH_REVERSE, the
+    # default): the patch hooks a private Django resolver seam
+    # (URLResolver._reverse_with_prefix via get_resolver, 03-services.md) that
+    # is not a public API and can change shape or behaviour between Django
+    # versions without necessarily raising the TypeError/AttributeError the
+    # ready()-time seam self-test catches. A self-test that still passes by
+    # signature is not proof the seam's BEHAVIOUR is unchanged, so an
+    # unverified ceiling on the active patch fails startup rather than
+    # booting on trust; the old W004 behaviour (log-and-continue) left an
+    # unverified Django version running the patch silently in production
+    # until something visibly broke. Routing-only installs
+    # (HOSTMAP_PATCH_REVERSE = False) never touch that seam, so they keep
+    # the softer W004 warning: nothing about routing is unverified here.
     import django
 
     from hostmap.apps import TESTED_DJANGO_CEILING
+    from hostmap.conf import hostmap_settings
 
-    if django.VERSION[:2] > TESTED_DJANGO_CEILING:
-        ceiling = ".".join(str(n) for n in TESTED_DJANGO_CEILING)
-        running = ".".join(str(n) for n in django.VERSION[:2])
+    if django.VERSION[:2] <= TESTED_DJANGO_CEILING:
+        return []
+
+    ceiling = ".".join(str(n) for n in TESTED_DJANGO_CEILING)
+    running = ".".join(str(n) for n in django.VERSION[:2])
+
+    if hostmap_settings.PATCH_REVERSE:
         return [
-            Warning(
-                f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}).",
-                hint="If reversing misbehaves, set HOSTMAP_PATCH_REVERSE = False until a compatible release ships.",
-                id="hostmap.W004",
+            Error(
+                f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}), "
+                "and HOSTMAP_PATCH_REVERSE is active.",
+                hint=(
+                    "The reverse patch hooks a private Django resolver seam that has not been verified "
+                    f"on Django {running}. Set HOSTMAP_PATCH_REVERSE = False to run routing-only until a "
+                    "compatible django-hostmap release ships, or pin Django to a tested version."
+                ),
+                id="hostmap.E009",
             )
         ]
-    return []
+    return [
+        Warning(
+            f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}).",
+            hint="HOSTMAP_PATCH_REVERSE is already off, so routing-only operation is unaffected.",
+            id="hostmap.W004",
+        )
+    ]

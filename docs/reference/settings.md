@@ -123,9 +123,12 @@ URL, the same as it would with no hostmap installed at all.
 to decide whether to install the seam; flipping it via a live `settings`
 override does not retroactively install or remove the patch mid-process.
 
-**Related check:** `hostmap.W004` (see below) fires independently of this
-setting, warning about the Django version ceiling regardless of whether the
-patch is installed.
+**Related check:** the Django version-ceiling check (see below) fires
+regardless of this setting, but its SEVERITY depends on it: `hostmap.E009`
+(an Error, blocking startup) when this setting is on and the running
+Django exceeds the tested ceiling, `hostmap.W004` (a Warning) when it is
+`False`, since routing-only operation never touches the unverified
+resolver seam.
 
 ---
 
@@ -227,6 +230,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.E006` | An entry's `urlconf` cannot be imported |
 | `hostmap.E007` | Two or more entries resolve to the same effective host |
 | `hostmap.E008` | A `subdomain` entry is declared with `HOSTMAP_PARENT_DOMAIN` unset |
+| `hostmap.E009` | The running Django version is newer than the package's tested ceiling AND `HOSTMAP_PATCH_REVERSE` is active (the patch hooks an unverified private resolver seam) |
 
 ### Warnings
 
@@ -235,7 +239,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.W001` | A mapped host is not covered by `ALLOWED_HOSTS` |
 | `hostmap.W002` | `HOSTMAP` is configured but `HostmapMiddleware` is not in `MIDDLEWARE` |
 | `hostmap.W003` | `ROOT_URLCONF` does not match the default entry's URLconf |
-| `hostmap.W004` | The running Django version is newer than the package's tested ceiling |
+| `hostmap.W004` | The running Django version is newer than the package's tested ceiling, but `HOSTMAP_PATCH_REVERSE = False` (routing-only, so the unverified seam is never touched) |
 
 ---
 

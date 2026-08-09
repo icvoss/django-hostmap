@@ -116,7 +116,13 @@ support issue.
 `reverse()` is left untouched (cross-host links regress to paths), routing
 keeps working, and the explicit API still works. Set it if a Django upgrade
 lands before a compatible django-hostmap release; the startup self-test and
-`hostmap.W004` warn before anything breaks.
+`hostmap.E009`/`hostmap.W004` catch a Django upgrade running ahead of the
+package's tested ceiling before anything breaks. With the patch active
+(the default), an unverified Django version is `hostmap.E009`, an Error
+that fails startup, since the patch hooks a private resolver seam that has
+not been verified there; with the patch off, the same condition is only
+`hostmap.W004`, a Warning, since routing-only operation never touches that
+seam.
 
 ## Diagnostics
 

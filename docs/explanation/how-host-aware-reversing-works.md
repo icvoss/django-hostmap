@@ -102,11 +102,17 @@ exists. Two guards close that gap:
    message: set `HOSTMAP_PATCH_REVERSE = False` until a compatible release
    ships. A loud failure at deploy time beats a subtle one in production
    traffic.
-2. System check `hostmap.W004` warns when the running Django version is
-   newer than the package's declared tested ceiling, even if the self-test
-   still passes. This is advance notice: a version bump that happens to
-   still work today is not guaranteed to keep working, and the warning
-   tells you to test the upgrade in a branch rather than assume.
+2. System check `hostmap.E009`/`hostmap.W004` fires when the running
+   Django version is newer than the package's declared tested ceiling,
+   even if the self-test still passes: a version bump that happens to
+   still work today by method signature is not guaranteed to keep working
+   by behaviour. With the patch active (the default), this is
+   `hostmap.E009`, an Error that fails startup, since the patch is
+   genuinely running an unverified private seam; a version bump that
+   "happens to work" is not something this package lets through silently.
+   With `HOSTMAP_PATCH_REVERSE = False`, the same condition is only
+   `hostmap.W004`, a non-blocking Warning, since routing-only operation
+   never exercises that seam at all.
 
 See [turn off reversing](../how-to/turn-off-reversing.md) for what actually
 happens when you flip that setting.
@@ -160,4 +166,4 @@ third-party-app simulation test exist to pin down.
 - [Reverse out of a request](../how-to/reverse-out-of-a-request.md): the
   explicit API that shares this same resolution logic.
 - [Settings reference](../reference/settings.md#hostmap_patch_reverse):
-  `HOSTMAP_PATCH_REVERSE` and the `hostmap.W004` check.
+  `HOSTMAP_PATCH_REVERSE` and the `hostmap.E009`/`hostmap.W004` checks.

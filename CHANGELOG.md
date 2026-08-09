@@ -5,6 +5,22 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`hostmap.W004` (running Django newer than the tested ceiling) now fails
+  startup as `hostmap.E009` when the reverse patch is active** (#4).
+  Previously the check was a Warning regardless of `HOSTMAP_PATCH_REVERSE`,
+  so an unverified Django version could run the private resolver-seam patch
+  silently in production until something visibly broke. `hostmap.E009`
+  (an Error, blocking startup) now fires when the patch is on and the
+  running Django exceeds the declared ceiling; `hostmap.W004` still fires,
+  as a non-blocking Warning, when `HOSTMAP_PATCH_REVERSE = False`, since
+  routing-only operation never touches the unverified seam. Remediation is
+  unchanged: set `HOSTMAP_PATCH_REVERSE = False` to run routing-only until
+  a compatible release ships, or pin Django to a tested version.
+
 ## [0.1.1] - 2026-07-12
 
 ### Fixed

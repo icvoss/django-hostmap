@@ -190,10 +190,41 @@ def test_w003_root_urlconf_mismatch():
     assert "hostmap.W003" in ids
 
 
-def test_w004_django_above_tested_ceiling(monkeypatch):
-    """hostmap.W004: the running Django exceeds the tested ceiling."""
+def test_e009_django_above_tested_ceiling_with_patch_active(monkeypatch):
+    """icvoss/django-hostmap#4: hostmap.E009, the running Django exceeds the
+    tested ceiling AND the reverse patch is active (HOSTMAP_PATCH_REVERSE
+    defaults to True), the risky combination: the patch hooks a private
+    Django resolver seam that has not been verified on this Django version.
+    This must fail startup (an Error, not a Warning), never boot silently."""
     import hostmap.apps
 
     monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", (0, 0))
     ids = _errors(HOSTMAP=BASE_MAP, HOSTMAP_DEFAULT="www", HOSTMAP_PARENT_DOMAIN="example.com")
+    assert "hostmap.E009" in ids
+    assert "hostmap.W004" not in ids
+
+
+def test_w004_django_above_tested_ceiling_with_patch_disabled(monkeypatch):
+    """hostmap.W004: the running Django exceeds the tested ceiling but
+    HOSTMAP_PATCH_REVERSE is False (routing-only), so the unverified private
+    resolver seam is never touched. This stays a Warning: nothing here is
+    actually running unverified, so failing startup would be over-strict."""
+    import hostmap.apps
+
+    monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", (0, 0))
+    ids = _errors(
+        HOSTMAP=BASE_MAP,
+        HOSTMAP_DEFAULT="www",
+        HOSTMAP_PARENT_DOMAIN="example.com",
+        HOSTMAP_PATCH_REVERSE=False,
+    )
     assert "hostmap.W004" in ids
+    assert "hostmap.E009" not in ids
+
+
+def test_no_ceiling_problem_when_django_is_within_the_tested_ceiling():
+    """Neither E009 nor W004 fires on a Django version within the declared
+    ceiling: the ordinary, unremarkable case."""
+    ids = _errors(HOSTMAP=BASE_MAP, HOSTMAP_DEFAULT="www", HOSTMAP_PARENT_DOMAIN="example.com")
+    assert "hostmap.E009" not in ids
+    assert "hostmap.W004" not in ids
