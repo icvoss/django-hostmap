@@ -13,7 +13,13 @@ from django.core.exceptions import ImproperlyConfigured
 # The highest Django feature version this release has been tested against.
 # ``hostmap.E009`` (patch active) or ``hostmap.W004`` (patch off) fires when
 # the running Django exceeds it (04-interfaces.md, icvoss/django-hostmap#4).
-TESTED_DJANGO_CEILING = (6, 0)
+#
+# Raised to (6, 1) after verifying the seam directly (icvoss/django-hostmap#9):
+# ``django/urls/resolvers.py`` and the rest of the ``django/urls`` package are
+# byte-identical between Django 6.0.8 and 6.1, and the 6.1 release notes make
+# no mention of ``django.urls``, resolvers, or reversing. ``_reverse_with_prefix``
+# keeps its signature and behaviour, so the patch needed no adaptation.
+TESTED_DJANGO_CEILING = (6, 1)
 
 
 class HostmapConfig(AppConfig):
