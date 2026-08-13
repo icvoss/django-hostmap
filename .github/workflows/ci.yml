@@ -42,7 +42,7 @@ jobs:
         # The seam self-test (AC-HOSTMAP-018) runs against every supported
         # Django version so an internals move fails loudly here.
         python-version: ["3.12", "3.13"]
-        django-version: ["5.2", "6.0"]
+        django-version: ["5.2", "6.0", "6.1"]
 
     steps:
       - uses: actions/checkout@v6
