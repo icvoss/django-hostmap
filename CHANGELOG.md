@@ -5,6 +5,18 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Django 6.1 supported; tested ceiling raised to `(6, 1)`** (#9). The
+  reverse-patch seam was verified directly rather than assumed: the whole
+  `django/urls` package, including `resolvers.py` and `_reverse_with_prefix`,
+  is byte-identical between Django 6.0.8 and 6.1, and the Django 6.1 release
+  notes make no mention of `django.urls`, resolvers, or reversing. The patch
+  required no changes. `hostmap.E009` (patch active) and `hostmap.W004`
+  (patch off) now only fire above Django 6.1.
+
 ## [1.0.0] - 2026-08-09
 
 ### Changed
