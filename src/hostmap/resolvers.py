@@ -41,6 +41,24 @@ class HostAwareResolver(URLResolver):
     no recursion.
     """
 
+    def __init__(self, *args, entry_order_override=None, **kwargs):
+        """``entry_order_override``, when given, replaces ``urls.entry_order()``
+        as the source of the cross-host fallback order for THIS resolver
+        instance only.
+
+        An injectable, instance-scoped seam rather than a module global: the
+        production path (``_host_aware_resolver``, below) never sets it, so
+        ``entry_order()`` stays the single source of truth for BR-HOSTMAP-005
+        ordering there. It exists so the ready()-time seam self-test
+        (apps.py) can drive a resolver carrying its own throwaway probe
+        entries without mutating ``hostmap.urls.entry_order`` for the
+        process, which would otherwise be a live window (however short)
+        during which every other reverse() call, on any thread, would see
+        the self-test's fake entries instead of the real host map.
+        """
+        super().__init__(*args, **kwargs)
+        self._entry_order_override = entry_order_override
+
     def _reverse_with_prefix(self, lookup_view, _prefix, *args, **kwargs):
         try:
             return super()._reverse_with_prefix(lookup_view, _prefix, *args, **kwargs)
@@ -52,9 +70,13 @@ class HostAwareResolver(URLResolver):
         # urls.entry_order(); the seam only supplies the low-level reverse
         # primitive (watch flag 2, one code path). entry_order()[0] is the
         # active host, whose miss brought us here, so we skip it.
+        # ``_entry_order_override`` (an instance attribute, never a module
+        # global) lets the seam self-test substitute its own throwaway
+        # entries for this one resolver instance only; the production path
+        # never sets it, so this stays entry_order() by default.
         from hostmap.urls import _absolute_url, entry_order, logger
 
-        order = entry_order()
+        order = self._entry_order_override() if self._entry_order_override is not None else entry_order()
         for entry in order[1:]:
             resolver = _stock_resolver(entry.urlconf)
             try:

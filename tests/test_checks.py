@@ -241,3 +241,73 @@ def test_no_ceiling_problem_when_django_is_within_the_tested_ceiling(monkeypatch
     ids = _errors(HOSTMAP=BASE_MAP, HOSTMAP_DEFAULT="www", HOSTMAP_PARENT_DOMAIN="example.com")
     assert "hostmap.E009" not in ids
     assert "hostmap.W004" not in ids
+
+
+def test_hostmap_allow_untested_django_defaults_to_false():
+    """HOSTMAP_ALLOW_UNTESTED_DJANGO defaults to False when unset, so the
+    E009 refusal is the out-of-the-box behaviour (icvoss/django-hostmap#12).
+
+    Asserted explicitly, against a Django settings module with the setting
+    absent, rather than relying on the default implicitly elsewhere.
+    """
+    from django.conf import settings
+
+    from hostmap.conf import hostmap_settings
+
+    assert not hasattr(settings, "HOSTMAP_ALLOW_UNTESTED_DJANGO")
+    assert hostmap_settings.ALLOW_UNTESTED_DJANGO is False
+
+
+def test_e009_still_fires_when_allow_untested_django_is_false(monkeypatch):
+    """HOSTMAP_ALLOW_UNTESTED_DJANGO = False (the default) leaves the
+    original E009 refusal unchanged: back-compatible with pre-#12 startup
+    behaviour when the setting is absent or explicitly off."""
+    import hostmap.apps
+
+    monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", (0, 0))
+    ids = _errors(
+        HOSTMAP=BASE_MAP,
+        HOSTMAP_DEFAULT="www",
+        HOSTMAP_PARENT_DOMAIN="example.com",
+        HOSTMAP_ALLOW_UNTESTED_DJANGO=False,
+    )
+    assert "hostmap.E009" in ids
+    assert "hostmap.W005" not in ids
+
+
+def test_w005_when_allow_untested_django_is_true_and_patch_active(monkeypatch):
+    """icvoss/django-hostmap#12: HOSTMAP_ALLOW_UNTESTED_DJANGO = True downgrades
+    hostmap.E009 to hostmap.W005, an explicit, opt-in acceptance of an
+    unverified Django version running the reverse patch. Startup proceeds;
+    the ready()-time seam self-test remains the live guard regardless."""
+    import hostmap.apps
+
+    monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", (0, 0))
+    ids = _errors(
+        HOSTMAP=BASE_MAP,
+        HOSTMAP_DEFAULT="www",
+        HOSTMAP_PARENT_DOMAIN="example.com",
+        HOSTMAP_ALLOW_UNTESTED_DJANGO=True,
+    )
+    assert "hostmap.W005" in ids
+    assert "hostmap.E009" not in ids
+    assert "hostmap.W004" not in ids
+
+
+def test_w004_unaffected_by_allow_untested_django_when_patch_is_off(monkeypatch):
+    """Routing-only (HOSTMAP_PATCH_REVERSE = False) keeps the existing softer
+    hostmap.W004 regardless of HOSTMAP_ALLOW_UNTESTED_DJANGO: the opt-out
+    setting only matters when the patch is actually active."""
+    import hostmap.apps
+
+    monkeypatch.setattr(hostmap.apps, "TESTED_DJANGO_CEILING", (0, 0))
+    ids = _errors(
+        HOSTMAP=BASE_MAP,
+        HOSTMAP_DEFAULT="www",
+        HOSTMAP_PARENT_DOMAIN="example.com",
+        HOSTMAP_PATCH_REVERSE=False,
+        HOSTMAP_ALLOW_UNTESTED_DJANGO=True,
+    )
+    assert "hostmap.W004" in ids
+    assert "hostmap.E009" not in ids
+    assert "hostmap.W005" not in ids
