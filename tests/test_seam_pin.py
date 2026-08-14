@@ -86,12 +86,17 @@ def test_seam_self_test_is_behavioural_not_signature_only():
     would pass even if the composed result were wrong; this test would fail
     if ``_seam_self_test`` regressed to that weaker shape, because it drives
     the same throwaway URLconfs the self-test builds internally and checks
-    the seam directly, independent of the self-test's own assertions."""
+    the seam directly, independent of the self-test's own assertions.
+
+    Uses ``entry_order_override`` (an instance-scoped constructor argument,
+    resolvers.py), the same seam ``_seam_self_test`` itself uses, rather than
+    monkeypatching ``hostmap.urls.entry_order``: that module global is read
+    by every other resolver on every thread, so mutating it, even in a test,
+    models a pattern this suite must not encourage."""
     from django.http import HttpResponse
     from django.urls import path
     from django.urls.resolvers import RegexPattern
 
-    from hostmap import urls as hostmap_urls
     from hostmap.map import ResolvedEntry
     from hostmap.resolvers import HostAwareResolver
 
@@ -116,18 +121,59 @@ def test_seam_self_test_is_behavioural_not_signature_only():
         wildcard=False,
     )
 
-    original_entry_order = hostmap_urls.entry_order
-    try:
-        hostmap_urls.entry_order = lambda: [active_entry, fallback_entry]
-        resolver = HostAwareResolver(RegexPattern(r"^/"), active_urlconf)
+    resolver = HostAwareResolver(
+        RegexPattern(r"^/"),
+        active_urlconf,
+        entry_order_override=lambda: [active_entry, fallback_entry],
+    )
 
-        assert resolver._reverse_with_prefix("behavioural-active", "/") == "/active/"
-        assert (
-            resolver._reverse_with_prefix("behavioural-fallback", "/")
-            == "https://behavioural-fallback.invalid/fallback/"
-        )
+    assert resolver._reverse_with_prefix("behavioural-active", "/") == "/active/"
+    assert (
+        resolver._reverse_with_prefix("behavioural-fallback", "/") == "https://behavioural-fallback.invalid/fallback/"
+    )
+
+
+def test_seam_self_test_does_not_mutate_the_module_global_entry_order():
+    """icvoss/django-hostmap#12 regression: ``_seam_self_test`` must never
+    reassign ``hostmap.urls.entry_order``, the module-global function every
+    other resolver reads at call time (``resolvers.py``'s
+    ``_cross_host_reverse``, ``urls.py``'s ``_resolve``). A version of the
+    self-test that monkeypatched it (restored in a ``finally``) would still
+    leave a live window during which a concurrent ``reverse()`` call, on any
+    thread, resolved against the self-test's throwaway ``.invalid`` entries
+    instead of the real host map, silently.
+
+    Proves this two ways: the function object's identity is unchanged after
+    ``_seam_self_test`` runs, and a call to ``entry_order()`` made from
+    *inside* the self-test's own construction of its resolver (spied via a
+    patched ``HostAwareResolver.__init__``) still returns the real,
+    settings-configured entries, not the self-test's fake ones."""
+    from hostmap import urls as hostmap_urls
+    from hostmap.apps import HostmapConfig
+    from hostmap.resolvers import HostAwareResolver
+
+    original_init = HostAwareResolver.__init__
+    seen = {}
+
+    def spying_init(self, *args, **kwargs):
+        seen["entry_order_identity"] = hostmap_urls.entry_order
+        seen["live_result_labels"] = {entry.label for entry in hostmap_urls.entry_order()}
+        return original_init(self, *args, **kwargs)
+
+    before_identity = hostmap_urls.entry_order
+    HostAwareResolver.__init__ = spying_init
+    try:
+        config = HostmapConfig.__new__(HostmapConfig)
+        config._seam_self_test()
     finally:
-        hostmap_urls.entry_order = original_entry_order
+        HostAwareResolver.__init__ = original_init
+
+    assert seen["entry_order_identity"] is before_identity, (
+        "hostmap.urls.entry_order was reassigned during _seam_self_test"
+    )
+    assert hostmap_urls.entry_order is before_identity
+    assert "__hostmap_seam_active_entry__" not in seen["live_result_labels"]
+    assert "__hostmap_seam_fallback_entry__" not in seen["live_result_labels"]
 
 
 def test_seam_self_test_catches_a_cross_host_reverse_that_returns_the_wrong_url(monkeypatch):
