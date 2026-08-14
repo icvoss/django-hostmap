@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`HOSTMAP_ALLOW_UNTESTED_DJANGO` setting** (default `False`), an
+  explicit, per-consumer opt-out of the `hostmap.E009` startup refusal
+  above the tested Django ceiling (#12). Every future Django feature
+  release otherwise re-blocked every consumer running the reverse patch
+  on a version number alone, even when the seam was in fact fine, until a
+  new django-hostmap release shipped. Setting it to `True` downgrades
+  `hostmap.E009` to a new `hostmap.W005` (non-blocking); the default
+  `False` leaves today's exact refusal unchanged, so this is fully
+  back-compatible. `TESTED_DJANGO_CEILING` itself is not raised by this
+  change; it stays the maintainer-verified figure.
+
+### Changed
+
+- **The ready()-time seam self-test is now behavioural, not
+  signature-only** (#12). It previously called
+  `_reverse_with_prefix("__hostmap_seam_probe__", "/")` and swallowed
+  `NoReverseMatch`, which proved only that the private
+  `URLResolver._reverse_with_prefix` seam still accepted its arguments.
+  It now builds two throwaway, in-memory URLconfs and drives the
+  host-aware resolver directly: a same-host reverse must return the
+  exact expected bare path, and a cross-host reverse must return the
+  exact expected host-prefixed absolute URL. A seam that accepts the call
+  but silently returns a wrong result now fails startup with
+  `ImproperlyConfigured`, not just one that raises. This is the guard
+  `HOSTMAP_ALLOW_UNTESTED_DJANGO = True` relies on: it runs regardless of
+  the new setting.
+
 ## [1.0.1] - 2026-08-13
 
 ### Changed
