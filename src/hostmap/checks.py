@@ -1,7 +1,7 @@
 """Django system checks for hostmap configuration (04-interfaces.md section 3).
 
 Registered in ``AppConfig.ready()`` and run at startup and during test
-collection. Errors (E001-E008) fail startup; warnings (W001-W004) surface
+collection. Errors (E001-E009) fail startup; warnings (W001-W005) surface
 misconfigurations that still boot.
 """
 
@@ -250,6 +250,17 @@ def _check_django_ceiling():
     # until something visibly broke. Routing-only installs
     # (HOSTMAP_PATCH_REVERSE = False) never touch that seam, so they keep
     # the softer W004 warning: nothing about routing is unverified here.
+    #
+    # HOSTMAP_ALLOW_UNTESTED_DJANGO (icvoss/django-hostmap#12, 2026-08-14):
+    # every future Django feature release otherwise re-blocks every consumer
+    # running the patch on a version number alone, even when the seam is in
+    # fact fine, until a new django-hostmap release ships. A consumer that
+    # sets this downgrades E009 to hostmap.W005, an explicit, opt-in
+    # acceptance of the risk. The ready()-time seam self-test (apps.py) is
+    # now behavioural, not just a signature probe, and still runs
+    # regardless of this setting: it is the live guard that backs the
+    # opt-out with real evidence, not trust. TESTED_DJANGO_CEILING itself
+    # is unaffected: this changes the failure MODE, not the number.
     import django
 
     from hostmap.apps import TESTED_DJANGO_CEILING
@@ -262,6 +273,21 @@ def _check_django_ceiling():
     running = ".".join(str(n) for n in django.VERSION[:2])
 
     if hostmap_settings.PATCH_REVERSE:
+        if hostmap_settings.ALLOW_UNTESTED_DJANGO:
+            return [
+                Warning(
+                    f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}), "
+                    "and HOSTMAP_PATCH_REVERSE is active, but HOSTMAP_ALLOW_UNTESTED_DJANGO has explicitly "
+                    "accepted an unverified Django version.",
+                    hint=(
+                        "The reverse patch hooks a private Django resolver seam that has not been verified "
+                        f"on Django {running}. The ready()-time seam self-test is the live guard: it fails "
+                        "startup with ImproperlyConfigured if the seam's behaviour, not just its signature, "
+                        "does not hold on this Django version."
+                    ),
+                    id="hostmap.W005",
+                )
+            ]
         return [
             Error(
                 f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}), "
@@ -269,7 +295,9 @@ def _check_django_ceiling():
                 hint=(
                     "The reverse patch hooks a private Django resolver seam that has not been verified "
                     f"on Django {running}. Set HOSTMAP_PATCH_REVERSE = False to run routing-only until a "
-                    "compatible django-hostmap release ships, or pin Django to a tested version."
+                    "compatible django-hostmap release ships, pin Django to a tested version, or set "
+                    "HOSTMAP_ALLOW_UNTESTED_DJANGO = True to accept the risk (the ready()-time seam "
+                    "self-test still guards it behaviourally)."
                 ),
                 id="hostmap.E009",
             )

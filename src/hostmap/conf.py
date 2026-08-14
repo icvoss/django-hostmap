@@ -56,5 +56,16 @@ class _Settings:
         """``redirect_to`` entries use 301 when true, 302 when false."""
         return _setting("HOSTMAP_REDIRECT_PERMANENT", True)
 
+    @property
+    def ALLOW_UNTESTED_DJANGO(self):  # noqa: N802
+        """Downgrade ``hostmap.E009`` to ``hostmap.W005`` above the tested ceiling.
+
+        Default ``False`` preserves the startup refusal (icvoss/django-hostmap#4).
+        ``True`` is an explicit, per-consumer acceptance of an unverified Django
+        version running the reverse patch; the ready()-time seam self-test
+        (apps.py) is the live guard that still runs either way.
+        """
+        return _setting("HOSTMAP_ALLOW_UNTESTED_DJANGO", False)
+
 
 hostmap_settings = _Settings()
