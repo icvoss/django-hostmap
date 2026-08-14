@@ -68,6 +68,19 @@ class HostmapConfig(AppConfig):
         ``tests/test_routing.py``), not by a ready()-time check that must
         stay fast and self-contained.
 
+        No process-global state is touched. The throwaway fallback entries
+        are supplied to a single ``HostAwareResolver`` instance via
+        ``entry_order_override`` (an instance attribute, resolvers.py), not
+        by monkeypatching ``hostmap.urls.entry_order``: the latter is read
+        at call time by every other resolver on every thread
+        (``resolvers.py``'s ``_cross_host_reverse``, ``urls.py``'s
+        ``_resolve``), so mutating it, even briefly and even restored in a
+        ``finally``, would be a live window during which any concurrent
+        ``reverse()`` call anywhere in the process could resolve against
+        these fake ``.invalid`` entries instead of the real host map. This
+        self-test's resolver is a private, freshly constructed object that
+        nothing else references, so it cannot leak.
+
         A ``TypeError``/``AttributeError`` means the ``_reverse_with_prefix``
         seam has moved under us; any other mismatch (wrong URL, unexpected
         exception) means it still runs but no longer behaves as expected.
@@ -78,7 +91,6 @@ class HostmapConfig(AppConfig):
         from django.urls import NoReverseMatch, path
         from django.urls.resolvers import RegexPattern
 
-        from hostmap import urls as hostmap_urls
         from hostmap.conf import hostmap_settings
         from hostmap.map import ResolvedEntry
         from hostmap.resolvers import HostAwareResolver
@@ -123,10 +135,12 @@ class HostmapConfig(AppConfig):
         expected_host = f"{fallback_host}:{hostmap_settings.PORT}" if hostmap_settings.PORT else fallback_host
         expected_cross_host_url = f"{hostmap_settings.SCHEME}://{expected_host}{cross_host_path}"
 
-        original_entry_order = hostmap_urls.entry_order
         try:
-            hostmap_urls.entry_order = lambda: [active_entry, fallback_entry]
-            resolver = HostAwareResolver(RegexPattern(r"^/"), active_urlconf)
+            resolver = HostAwareResolver(
+                RegexPattern(r"^/"),
+                active_urlconf,
+                entry_order_override=lambda: [active_entry, fallback_entry],
+            )
 
             same_host_result = resolver._reverse_with_prefix(active_name, "/")
             if same_host_result != "/active-probe/":
@@ -160,5 +174,3 @@ class HostmapConfig(AppConfig):
                 f"Django version ({exc}). Set HOSTMAP_PATCH_REVERSE = False to run "
                 "routing-only until a compatible django-hostmap release ships."
             ) from exc
-        finally:
-            hostmap_urls.entry_order = original_entry_order
