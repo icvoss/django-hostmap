@@ -89,7 +89,9 @@ def test_invalid_default_fails_loudly_when_checks_are_bypassed():
     from django.core.exceptions import ImproperlyConfigured
 
     with override_settings(HOSTMAP_DEFAULT="missing"):
-        client = Client(SERVER_NAME="unmatched.example.com")
+        # A single-level subdomain would match the configured ``tenant``
+        # wildcard, never reaching the invalid default fallback.
+        client = Client(SERVER_NAME="unmatched.level.example.com")
         with pytest.raises(ImproperlyConfigured, match="HOSTMAP_DEFAULT"):
             client.get("/")
 

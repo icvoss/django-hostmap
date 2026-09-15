@@ -7,8 +7,8 @@ and 03-services.md section 3.
 from __future__ import annotations
 
 import pytest
-from django.urls import NoReverseMatch
 from django.test import override_settings
+from django.urls import NoReverseMatch
 
 from hostmap.urls import build_absolute_uri, reverse, use_host
 
@@ -42,9 +42,11 @@ def test_build_absolute_uri_uses_default_without_an_active_host():
 
 def test_build_absolute_uri_name_without_active_or_default_host_raises():
     """The explicit absolute API never silently returns a relative URL."""
-    with override_settings(HOSTMAP_DEFAULT=""):
-        with pytest.raises(NoReverseMatch, match="no active, default, or specified host"):
-            build_absolute_uri("home")
+    with (
+        override_settings(HOSTMAP_DEFAULT=""),
+        pytest.raises(NoReverseMatch, match="no active, default, or specified host"),
+    ):
+        build_absolute_uri("home")
 
 
 def test_build_absolute_uri_with_ready_made_path():
