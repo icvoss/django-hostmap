@@ -15,7 +15,6 @@ from contextlib import contextmanager
 
 from django.urls import NoReverseMatch
 from django.urls import reverse as django_reverse
-from django.urls.base import get_script_prefix
 
 from hostmap import context
 from hostmap import map as hostmap_map
@@ -123,7 +122,7 @@ def build_absolute_uri(name_or_path, args=None, kwargs=None, host=None) -> str:
     or a ready-made path (starting with ``/``). ``host`` optionally pins the
     entry by label or by literal host (for wildcard entries).
     """
-    entry = _host_to_entry(host) if host is not None else context.get_active()
+    entry = _host_to_entry(host) if host is not None else context.get_active() or hostmap_map.default_entry()
 
     if isinstance(name_or_path, str) and name_or_path.startswith("/"):
         if entry is None:
@@ -133,10 +132,15 @@ def build_absolute_uri(name_or_path, args=None, kwargs=None, host=None) -> str:
     if host is not None:
         return _resolve(name_or_path, args=args, kwargs=kwargs, force_host_entry=entry)
 
+    if entry is None:
+        raise NoReverseMatch(
+            "build_absolute_uri: no active, default, or specified host to build an absolute URL against."
+        )
+
     # No pinned host: reverse host-aware, then force absolute against the
-    # active host when the result is still a same-host path.
+    # active or default host when the result is still a same-host path.
     result = _resolve(name_or_path, args=args, kwargs=kwargs)
-    if result.startswith("/") and entry is not None:
+    if result.startswith("/"):
         return _absolute_url(entry, result)
     return result
 
@@ -147,7 +151,7 @@ def use_host(label=None, host=None):
 
     The BR-HOSTMAP-006 override for emails, Celery tasks, API payloads and
     webhooks. Pass ``label`` for a named entry or ``host`` for a wildcard's
-    concrete host (README open question 2).
+    concrete host.
     """
     entry = _host_to_entry(host if host is not None else label, is_host=host is not None)
     token = context.set_active(entry)
@@ -191,6 +195,4 @@ def _host_to_entry(value, is_host=False):
     raise NoReverseMatch(f"use_host: {value!r} does not match any hostmap entry or host.")
 
 
-# ``get_script_prefix`` is imported for the seam self-test (apps.py) to reverse
-# a probe pattern through the same script-prefix machinery stock reverse uses.
-__all__ = ["reverse", "build_absolute_uri", "use_host", "get_script_prefix"]
+__all__ = ["reverse", "build_absolute_uri", "use_host"]

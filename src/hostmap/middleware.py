@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404, HttpResponsePermanentRedirect, HttpResponseRedirect
 
 from hostmap import context
@@ -47,7 +48,6 @@ class HostmapMiddleware:
         entry = self._resolve_entry(request)
 
         if entry is None:
-            # No match and HOSTMAP_UNMATCHED == "reject".
             raise Http404("Host does not match any hostmap entry.")
 
         if entry.is_redirect:
@@ -72,16 +72,21 @@ class HostmapMiddleware:
             return entry
         if hostmap_settings.UNMATCHED == "reject":
             return None
-        return hostmap_map.default_entry()
+        default = hostmap_map.default_entry()
+        if default is None:
+            raise ImproperlyConfigured("HOSTMAP_DEFAULT must name an entry when HOSTMAP_UNMATCHED is 'default'.")
+        return default
 
     def _redirect(self, request, entry):
         """Redirect to the same path and query on the target host (BR-HOSTMAP-008)."""
         from hostmap.urls import build_absolute_uri
 
         target = hostmap_map.redirect_target(entry)
+        if target is None:
+            raise ImproperlyConfigured(f"HOSTMAP redirect entry '{entry.label}' has no valid redirect target.")
         # Preserve the full path including the query string. ``host`` accepts a
         # label; the target is always a non-redirect entry (E004 forbids chains).
-        location = build_absolute_uri(request.get_full_path(), host=target.label if target else None)
+        location = build_absolute_uri(request.get_full_path(), host=target.label)
         if hostmap_settings.REDIRECT_PERMANENT:
             return HttpResponsePermanentRedirect(location)
         return HttpResponseRedirect(location)

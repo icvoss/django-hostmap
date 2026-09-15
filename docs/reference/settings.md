@@ -187,6 +187,9 @@ Behaviour for a request whose host matches no `HOSTMAP` entry (but passed
 | `"default"` | Serve the request using the `HOSTMAP_DEFAULT` entry |
 | `"reject"` | Raise `Http404` |
 
+Any other value fails the `hostmap.E010` system check rather than silently
+falling back to the default entry.
+
 **When to change it:** Set to `"reject"` for deployments where an
 allowed-but-unmapped host should be rejected outright rather than
 transparently served by the default entry. See
@@ -231,6 +234,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.E007` | Two or more entries resolve to the same effective host |
 | `hostmap.E008` | A `subdomain` entry is declared with `HOSTMAP_PARENT_DOMAIN` unset |
 | `hostmap.E009` | The running Django version is newer than the package's tested ceiling AND `HOSTMAP_PATCH_REVERSE` is active (the patch hooks an unverified private resolver seam) |
+| `hostmap.E010` | `HOSTMAP_UNMATCHED` is neither `"default"` nor `"reject"` |
 
 ### Warnings
 
@@ -240,6 +244,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.W002` | `HOSTMAP` is configured but `HostmapMiddleware` is not in `MIDDLEWARE` |
 | `hostmap.W003` | `ROOT_URLCONF` does not match the default entry's URLconf |
 | `hostmap.W004` | The running Django version is newer than the package's tested ceiling, but `HOSTMAP_PATCH_REVERSE = False` (routing-only, so the unverified seam is never touched) |
+| `hostmap.W005` | The running Django version is newer than the package's tested ceiling, `HOSTMAP_PATCH_REVERSE` is active, and `HOSTMAP_ALLOW_UNTESTED_DJANGO = True` |
 
 ---
 
