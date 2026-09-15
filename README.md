@@ -73,6 +73,7 @@ at the call site changes.
 | `HOSTMAP_PORT` | `""` | Port appended to all generated hosts |
 | `HOSTMAP_UNMATCHED` | `"default"` | `"default"` routes unmatched hosts to the default entry; `"reject"` returns 404 |
 | `HOSTMAP_REDIRECT_PERMANENT` | `True` | `redirect_to` entries use 301, else 302 |
+| `HOSTMAP_ALLOW_UNTESTED_DJANGO` | `False` | Explicit opt-out that downgrades the untested-Django reverse-patch refusal from `hostmap.E009` to `hostmap.W005` |
 
 ## Explicit API
 

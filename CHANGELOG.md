@@ -5,7 +5,24 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - 2026-09-15
+
+### Fixed
+
+- A Host header with one trailing dot now matches the same map entry as the
+  equivalent host without the dot. Previously it could silently route to the
+  default URLconf.
+- `build_absolute_uri()` now uses `HOSTMAP_DEFAULT` outside a request and
+  raises `NoReverseMatch` when no active, default, or specified host exists.
+  It no longer returns a relative URL from an API that promises an absolute
+  URL.
+- Invalid `HOSTMAP_UNMATCHED` values now fail `hostmap.E010`; an invalid
+  fallback default or redirect target now raises `ImproperlyConfigured` when
+  boot-time checks have been bypassed.
+
+### Changed
+
+- Removed the unneeded `get_script_prefix` re-export from `hostmap.urls`.
 
 ## [1.1.0] - 2026-08-14
 

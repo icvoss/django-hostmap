@@ -127,7 +127,7 @@ def redirect_target(entry: ResolvedEntry) -> ResolvedEntry | None:
 
 
 def _strip_port(host: str) -> str:
-    """Return ``host`` lowercased with any ``:port`` removed (BR-HOSTMAP-002).
+    """Return a normalised host without its port (BR-HOSTMAP-002).
 
     IPv6 literals are bracketed (``[::1]:8000``); split on the last colon only
     when it falls outside a bracket.
@@ -138,10 +138,10 @@ def _strip_port(host: str) -> str:
         end = host.find("]")
         if end != -1:
             return host[: end + 1]
-        return host
+        return host[:-1] if host.endswith(".") else host
     if ":" in host:
-        return host.rsplit(":", 1)[0]
-    return host
+        host = host.rsplit(":", 1)[0]
+    return host[:-1] if host.endswith(".") else host
 
 
 def match(host: str) -> ResolvedEntry | None:

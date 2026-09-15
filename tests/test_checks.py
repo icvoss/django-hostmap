@@ -118,6 +118,17 @@ def test_e005_default_not_a_label():
     assert "hostmap.E005" in ids
 
 
+def test_e010_unmatched_setting_must_be_supported():
+    """hostmap.E010: an unmatched-host mode typo fails at boot."""
+    ids = _errors(
+        HOSTMAP=BASE_MAP,
+        HOSTMAP_DEFAULT="www",
+        HOSTMAP_PARENT_DOMAIN="example.com",
+        HOSTMAP_UNMATCHED="defualt",
+    )
+    assert "hostmap.E010" in ids
+
+
 def test_e006_unimportable_urlconf():
     """hostmap.E006: an entry's urlconf cannot be imported."""
     ids = _errors(

@@ -1,7 +1,7 @@
 """Django system checks for hostmap configuration (04-interfaces.md section 3).
 
 Registered in ``AppConfig.ready()`` and run at startup and during test
-collection. Errors (E001-E009) fail startup; warnings (W001-W005) surface
+collection. Errors (E001-E010) fail startup; warnings (W001-W005) surface
 misconfigurations that still boot.
 """
 
@@ -22,6 +22,7 @@ def check_hostmap(app_configs, **kwargs):
 
     problems = []
     problems.extend(_check_entries(hostmap))
+    problems.extend(_check_unmatched())
     problems.extend(_check_default(hostmap))
     problems.extend(_check_duplicate_hosts())
     problems.extend(_check_allowed_hosts())
@@ -139,6 +140,19 @@ def _check_default(hostmap):
             )
         ]
     return []
+
+
+def _check_unmatched():
+    from hostmap.conf import hostmap_settings
+
+    if hostmap_settings.UNMATCHED in {"default", "reject"}:
+        return []
+    return [
+        Error(
+            f"HOSTMAP_UNMATCHED must be 'default' or 'reject', not {hostmap_settings.UNMATCHED!r}.",
+            id="hostmap.E010",
+        )
+    ]
 
 
 def _check_duplicate_hosts():

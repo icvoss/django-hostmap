@@ -5,6 +5,8 @@ Covers AC-HOSTMAP-012 and BR-HOSTMAP-008.
 
 from __future__ import annotations
 
+import pytest
+from django.core.exceptions import ImproperlyConfigured
 from django.test import Client, override_settings
 
 
@@ -48,3 +50,15 @@ def test_redirect_entry_answers_every_path():
     response = client.get("/anything/deep/")
     assert response.status_code == 301
     assert response["Location"] == "https://www.example.com/anything/deep/"
+
+
+def test_invalid_redirect_target_fails_loudly_when_checks_are_bypassed():
+    """A bypassed E004 cannot silently redirect to the default host."""
+    hostmap = {
+        "www": {"subdomain": "www", "urlconf": "urls_www"},
+        "apex": {"host": "example.com", "redirect_to": "missing"},
+    }
+    with override_settings(HOSTMAP=hostmap, HOSTMAP_DEFAULT="www"):
+        client = Client(SERVER_NAME="example.com")
+        with pytest.raises(ImproperlyConfigured, match="apex.*valid redirect target"):
+            client.get("/")

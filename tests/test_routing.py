@@ -36,6 +36,14 @@ def test_host_matching_ignores_port():
     assert response.content == b"user 7"
 
 
+def test_host_matching_ignores_one_trailing_dot():
+    """AC-011: a trailing-dot FQDN routes to the matching URLconf (BR-002)."""
+    client = Client(SERVER_NAME="api.example.com.")
+    response = client.get("/users/7/")
+    assert response.status_code == 200
+    assert response.content == b"user 7"
+
+
 def test_exact_host_beats_wildcard():
     """The exact apex host is not swallowed by the tenant wildcard.
 
@@ -74,6 +82,16 @@ def test_unmatched_host_default_still_routes_after_reject_override():
     response = client.get("/")
     assert response.status_code == 200
     assert response.content == b"www home"
+
+
+def test_invalid_default_fails_loudly_when_checks_are_bypassed():
+    """A bypassed E005 does not misreport invalid fallback as an unmatched host."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    with override_settings(HOSTMAP_DEFAULT="missing"):
+        client = Client(SERVER_NAME="unmatched.example.com")
+        with pytest.raises(ImproperlyConfigured, match="HOSTMAP_DEFAULT"):
+            client.get("/")
 
 
 def test_wildcard_routes_to_tenant_urlconf_and_captures_subdomain():
