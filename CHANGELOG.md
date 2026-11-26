@@ -5,6 +5,31 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-11-26
+
+### Changed
+
+- **The logging-handler boot check is now an Error: `hostmap.E011` replaces
+  `hostmap.W006`** (ADR-101 decision 3, `docs/STANDARDS.md` section 15,
+  umbrella icvoss/icv-oss-umbrella#678). ADR-101 and STANDARDS require this
+  check to fail as `django.core.checks.Error`, not `Warning`; the previous
+  release shipped it as a Warning in error. `manage.py check`,
+  `check --deploy` and `runserver` now fail when no handler is reachable from
+  the `hostmap` logger (a handler on the logger itself, or on an ancestor while
+  `propagate` stays true; `logging.lastResort` does not count). The detection
+  logic is unchanged. The retired `hostmap.W006` id is not reused.
+
+### On upgrade
+
+- **Behaviour change: `manage.py check` and `check --deploy` now error.** A
+  project whose `LOGGING` configures no handler for `hostmap` or the root logger
+  previously saw the Warning `hostmap.W006`; it now sees the Error
+  `hostmap.E011` and the check run exits non-zero. Add a handler for `hostmap`
+  (or the root logger) in `LOGGING`, e.g. `LOGGING["loggers"]["hostmap"] =
+  {"handlers": [...], "level": "WARNING", "propagate": True}`. If you have
+  silenced the old id in `SILENCED_SYSTEM_CHECKS`, replace `hostmap.W006` with
+  `hostmap.E011`.
+
 ## [1.1.2] - 2026-11-26
 
 ### Added

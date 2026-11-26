@@ -235,6 +235,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.E008` | A `subdomain` entry is declared with `HOSTMAP_PARENT_DOMAIN` unset |
 | `hostmap.E009` | The running Django version is newer than the package's tested ceiling AND `HOSTMAP_PATCH_REVERSE` is active (the patch hooks an unverified private resolver seam) |
 | `hostmap.E010` | `HOSTMAP_UNMATCHED` is neither `"default"` nor `"reject"` |
+| `hostmap.E011` | No logging handler is reachable from the `hostmap` logger (none on it or on any ancestor it propagates to), so what the package logs is invisible. Add a handler for `hostmap` or the root logger in `LOGGING` (ADR-101 decision 3), or list `hostmap.E011` in `SILENCED_SYSTEM_CHECKS`. Shipped as the Warning `hostmap.W006` in 1.1.2; retired, not reused |
 
 ### Warnings
 
@@ -245,7 +246,6 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.W003` | `ROOT_URLCONF` does not match the default entry's URLconf |
 | `hostmap.W004` | The running Django version is newer than the package's tested ceiling, but `HOSTMAP_PATCH_REVERSE = False` (routing-only, so the unverified seam is never touched) |
 | `hostmap.W005` | The running Django version is newer than the package's tested ceiling, `HOSTMAP_PATCH_REVERSE` is active, and `HOSTMAP_ALLOW_UNTESTED_DJANGO = True` |
-| `hostmap.W006` | No logging handler is reachable from the `hostmap` logger (none on it or on any ancestor it propagates to), so what the package logs is invisible. Add a handler for `hostmap` or the root logger in `LOGGING` (ADR-101 decision 3) |
 
 ---
 
