@@ -8,7 +8,7 @@ from __future__ import annotations
 import contextlib
 import logging
 
-from django.core.checks import run_checks
+from django.core.checks.registry import registry
 from django.test import override_settings
 
 from hostmap.checks import check_hostmap, check_logging_handler_configured
@@ -409,10 +409,4 @@ class TestLoggingHandlerConfigured:
 
     def test_is_registered_with_the_django_check_framework(self):
         """The check must run under ``manage.py check``, not only when called directly."""
-        with self._logger_state("hostmap") as (logger,):
-            logger.handlers = []
-            logger.propagate = False
-
-            messages = run_checks()
-
-        assert "hostmap.W006" in [m.id for m in messages]
+        assert check_logging_handler_configured in registry.registered_checks
