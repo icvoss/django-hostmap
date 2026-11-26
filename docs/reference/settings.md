@@ -245,6 +245,7 @@ collection under `Tags.urls`. Errors (`E0xx`) fail startup; warnings
 | `hostmap.W003` | `ROOT_URLCONF` does not match the default entry's URLconf |
 | `hostmap.W004` | The running Django version is newer than the package's tested ceiling, but `HOSTMAP_PATCH_REVERSE = False` (routing-only, so the unverified seam is never touched) |
 | `hostmap.W005` | The running Django version is newer than the package's tested ceiling, `HOSTMAP_PATCH_REVERSE` is active, and `HOSTMAP_ALLOW_UNTESTED_DJANGO = True` |
+| `hostmap.W006` | No logging handler is reachable from the `hostmap` logger (none on it or on any ancestor it propagates to), so what the package logs is invisible. Add a handler for `hostmap` or the root logger in `LOGGING` (ADR-101 decision 3) |
 
 ---
 
