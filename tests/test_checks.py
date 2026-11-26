@@ -330,7 +330,7 @@ def test_w004_unaffected_by_allow_untested_django_when_patch_is_off(monkeypatch)
 
 class TestLoggingHandlerConfigured:
     """ADR-101 decision 3 (hostmap.W006): warn when nothing would receive a record
-    logged by the hostmap logger hierarchy (umbrella icvoss/oss#678)."""
+    logged by the hostmap logger hierarchy (umbrella icvoss/icv-oss-umbrella#678)."""
 
     @staticmethod
     @contextlib.contextmanager
