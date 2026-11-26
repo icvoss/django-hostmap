@@ -1,13 +1,26 @@
 """Django system checks for hostmap configuration (04-interfaces.md section 3).
 
 Registered in ``AppConfig.ready()`` and run at startup and during test
-collection. Errors (E001-E010) fail startup; warnings (W001-W005) surface
+collection. Errors (E001-E010) fail startup; warnings (W001-W006) surface
 misconfigurations that still boot.
+
+hostmap.W006: no logging handler reaches the package's own logger hierarchy
+(ADR-101 decision 3). hostmap logs through ``logging.getLogger("hostmap.reverse")``
+(``hostmap.urls`` and ``hostmap.resolvers``); if the consuming project's
+LOGGING configuration attaches no handler anywhere in that chain, what the
+package logs is invisible. Today the package emits only DEBUG diagnostics
+(the cross-host reverse trace) and reports failures by raising, so the
+warning is a contract guard for the day a failure record is added.
 """
 
 from __future__ import annotations
 
+import logging
+
 from django.core.checks import Error, Tags, Warning, register
+
+W006_ID = "hostmap.W006"
+_PACKAGE_LOGGER_NAME = "hostmap"
 
 _KNOWN_KEYS = frozenset({"host", "subdomain", "urlconf", "redirect_to"})
 
@@ -321,5 +334,58 @@ def _check_django_ceiling():
             f"Running Django {running} is newer than django-hostmap's tested ceiling ({ceiling}).",
             hint="HOSTMAP_PATCH_REVERSE is already off, so routing-only operation is unaffected.",
             id="hostmap.W004",
+        )
+    ]
+
+
+def _has_reachable_handler(logger_name: str) -> bool:
+    """Return whether a handler is attached anywhere in ``logger_name``'s
+    hierarchy that a record from it would actually reach, walking ancestors
+    while ``propagate`` is true. ``logging.lastResort`` (the module-level
+    fallback that stderr-prints WARNING+ when nothing else is configured) is
+    not a configured handler and is ignored, per ADR-101 decision 3: it
+    exists precisely to be invisible/unmanaged, not a substitute for a real
+    handler the consumer chose.
+    """
+    logger = logging.getLogger(logger_name)
+
+    current: logging.Logger | None = logger
+    while current is not None:
+        if any(handler is not logging.lastResort for handler in current.handlers):
+            return True
+        if not current.propagate:
+            return False
+        current = current.parent
+
+    return False
+
+
+@register()
+def check_logging_handler_configured(app_configs, **kwargs):
+    """Warn when no handler reaches the hostmap logger hierarchy (hostmap.W006).
+
+    ADR-101 decision 3: a package that emits through logging ships a
+    boot-time check confirming the consumer's LOGGING configuration
+    actually routes it somewhere. hostmap's only call sites are the
+    cross-host reverse DEBUG trace in ``hostmap.urls`` and
+    ``hostmap.resolvers`` (logger ``hostmap.reverse``); the check keeps the
+    seam honest for any failure record added under the ``hostmap`` hierarchy.
+    """
+    if _has_reachable_handler(_PACKAGE_LOGGER_NAME):
+        return []
+
+    return [
+        Warning(
+            "No logging handler is configured to receive records from the "
+            f"'{_PACKAGE_LOGGER_NAME}' logger (or any of its ancestors while "
+            "propagate=True), so what django-hostmap logs (currently the "
+            "cross-host reverse DEBUG trace from 'hostmap.reverse') will be invisible.",
+            hint=(
+                "Add a handler for the 'hostmap' logger (or the root logger, "
+                "if it propagates) in your LOGGING setting, e.g. "
+                "LOGGING['loggers']['hostmap'] = {'handlers': [...], "
+                "'level': 'WARNING', 'propagate': True}."
+            ),
+            id=W006_ID,
         )
     ]

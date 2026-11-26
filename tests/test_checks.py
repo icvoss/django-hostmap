@@ -5,9 +5,13 @@ Covers AC-HOSTMAP-017 and 04-interfaces.md section 3.
 
 from __future__ import annotations
 
+import contextlib
+import logging
+
+from django.core.checks import run_checks
 from django.test import override_settings
 
-from hostmap.checks import check_hostmap
+from hostmap.checks import check_hostmap, check_logging_handler_configured
 from hostmap.map import _parse_cached
 
 BASE_MAP = {
@@ -322,3 +326,93 @@ def test_w004_unaffected_by_allow_untested_django_when_patch_is_off(monkeypatch)
     assert "hostmap.W004" in ids
     assert "hostmap.E009" not in ids
     assert "hostmap.W005" not in ids
+
+
+class TestLoggingHandlerConfigured:
+    """ADR-101 decision 3 (hostmap.W006): warn when nothing would receive a record
+    logged by the hostmap logger hierarchy (umbrella icvoss/oss#678)."""
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _logger_state(*names):
+        """Snapshot and restore handlers, propagate and level of the named loggers."""
+        loggers = [logging.getLogger(name) for name in names]
+        saved = [(list(lg.handlers), lg.propagate, lg.level) for lg in loggers]
+        try:
+            yield loggers
+        finally:
+            for lg, (handlers, propagate, level) in zip(loggers, saved, strict=True):
+                lg.handlers = handlers
+                lg.propagate = propagate
+                lg.setLevel(level)
+
+    def test_warns_when_no_handler_and_no_propagation(self):
+        with self._logger_state("hostmap") as (logger,):
+            logger.handlers = []
+            logger.propagate = False
+
+            warnings = check_logging_handler_configured(None)
+
+        assert [w.id for w in warnings] == ["hostmap.W006"]
+
+    def test_warning_names_the_logger_and_a_remedy(self):
+        with self._logger_state("hostmap") as (logger,):
+            logger.handlers = []
+            logger.propagate = False
+
+            (warning,) = check_logging_handler_configured(None)
+
+        assert "'hostmap'" in warning.msg
+        assert "LOGGING" in warning.hint
+
+    def test_silent_when_a_handler_is_attached_to_the_package_logger(self):
+        with self._logger_state("hostmap") as (logger,):
+            logger.handlers = [logging.NullHandler()]
+            logger.propagate = False
+
+            warnings = check_logging_handler_configured(None)
+
+        assert warnings == []
+
+    def test_silent_when_a_propagating_ancestor_has_a_handler(self):
+        """A handler on the root logger counts, provided the package logger
+        still propagates up to it."""
+        with self._logger_state("hostmap", "") as (logger, root):
+            logger.handlers = []
+            logger.propagate = True
+            root.handlers = [logging.NullHandler()]
+
+            warnings = check_logging_handler_configured(None)
+
+        assert warnings == []
+
+    def test_warns_when_propagation_is_cut_before_a_handled_ancestor(self):
+        with self._logger_state("hostmap", "") as (logger, root):
+            logger.handlers = []
+            logger.propagate = False
+            root.handlers = [logging.NullHandler()]
+
+            warnings = check_logging_handler_configured(None)
+
+        assert [w.id for w in warnings] == ["hostmap.W006"]
+
+    def test_ignores_lastresort_as_a_configured_handler(self):
+        """logging.lastResort is the stdlib's unmanaged stderr fallback, not
+        a handler the consumer configured; it must not silence the warning."""
+        with self._logger_state("hostmap") as (logger,):
+            logger.handlers = [logging.lastResort]
+            logger.propagate = False
+
+            warnings = check_logging_handler_configured(None)
+
+        assert [w.id for w in warnings] == ["hostmap.W006"]
+
+    def test_is_registered_with_the_django_check_framework(self):
+        """The check must run under ``manage.py check``, not only when called directly."""
+        with self._logger_state("hostmap") as (logger,):
+            logger.handlers = []
+            logger.propagate = False
+
+            messages = run_checks()
+
+        assert "hostmap.W006" in [m.id for m in messages]

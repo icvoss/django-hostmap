@@ -5,6 +5,28 @@ All notable changes to django-hostmap are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-11-26
+
+### Added
+
+- **`hostmap.W006` system check** (ADR-101 decision 3, umbrella
+  icvoss/oss#678). Warns at `manage.py check`, `runserver` and deploy when no
+  logging handler is reachable from the `hostmap` logger (a handler on the
+  logger itself, or on an ancestor while `propagate` stays true;
+  `logging.lastResort` does not count). The package currently logs only the
+  DEBUG cross-host reverse trace (`hostmap.reverse`) and reports failures by
+  raising, so this guards the logging seam rather than silencing a live
+  failure path.
+
+### Upgrade note
+
+- **New warning on upgrade.** A project whose `LOGGING` configures no handler
+  for `hostmap` or the root logger will now see `hostmap.W006` from
+  `manage.py check`. It is a Warning, not an Error, so boot is unaffected;
+  add a handler for `hostmap` (or the root logger) to clear it, or list it in
+  `SILENCED_SYSTEM_CHECKS`. A project that runs `check --fail-level WARNING`
+  will fail until one of those is done.
+
 ## [1.1.1] - 2026-09-15
 
 ### Fixed
