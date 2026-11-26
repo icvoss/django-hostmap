@@ -1,16 +1,19 @@
 """Django system checks for hostmap configuration (04-interfaces.md section 3).
 
 Registered in ``AppConfig.ready()`` and run at startup and during test
-collection. Errors (E001-E010) fail startup; warnings (W001-W006) surface
+collection. Errors (E001-E011) fail startup; warnings (W001-W005) surface
 misconfigurations that still boot.
 
-hostmap.W006: no logging handler reaches the package's own logger hierarchy
+hostmap.E011: no logging handler reaches the package's own logger hierarchy
 (ADR-101 decision 3). hostmap logs through ``logging.getLogger("hostmap.reverse")``
 (``hostmap.urls`` and ``hostmap.resolvers``); if the consuming project's
 LOGGING configuration attaches no handler anywhere in that chain, what the
 package logs is invisible. Today the package emits only DEBUG diagnostics
 (the cross-host reverse trace) and reports failures by raising, so the
-warning is a contract guard for the day a failure record is added.
+check is a contract guard for the day a failure record is added. It is an
+Error, not a Warning, per ADR-101 decision 3 and docs/STANDARDS.md section
+15; it shipped as the Warning hostmap.W006 in 1.1.2, an id now retired and
+not reused.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import logging
 
 from django.core.checks import Error, Tags, Warning, register
 
-W006_ID = "hostmap.W006"
+E011_ID = "hostmap.E011"
 _PACKAGE_LOGGER_NAME = "hostmap"
 
 _KNOWN_KEYS = frozenset({"host", "subdomain", "urlconf", "redirect_to"})
@@ -362,7 +365,7 @@ def _has_reachable_handler(logger_name: str) -> bool:
 
 @register()
 def check_logging_handler_configured(app_configs, **kwargs):
-    """Warn when no handler reaches the hostmap logger hierarchy (hostmap.W006).
+    """Fail with an Error when no handler reaches the hostmap logger hierarchy (hostmap.E011).
 
     ADR-101 decision 3: a package that emits through logging ships a
     boot-time check confirming the consumer's LOGGING configuration
@@ -375,7 +378,7 @@ def check_logging_handler_configured(app_configs, **kwargs):
         return []
 
     return [
-        Warning(
+        Error(
             "No logging handler is configured to receive records from the "
             f"'{_PACKAGE_LOGGER_NAME}' logger (or any of its ancestors while "
             "propagate=True), so what django-hostmap logs (currently the "
@@ -386,6 +389,6 @@ def check_logging_handler_configured(app_configs, **kwargs):
                 "LOGGING['loggers']['hostmap'] = {'handlers': [...], "
                 "'level': 'WARNING', 'propagate': True}."
             ),
-            id=W006_ID,
+            id=E011_ID,
         )
     ]
